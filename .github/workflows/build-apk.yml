@@ -9,8 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -18,40 +17,38 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Unzip Gaming-Buz Project
+      - name: Extract ZIP if exists
         run: |
-          echo "--- Before unzip ---"
           ls -la
           if [ -f "gaming-buz.zip" ]; then
-            echo "Found gaming-buz.zip, extracting..."
-            sudo apt-get install -y unzip
             unzip -o gaming-buz.zip
             rm gaming-buz.zip
-            echo "--- After unzip ---"
-            ls -la
-          else
-            echo "No zip found, using direct files"
           fi
-          
-          # Agar zip ke andar ek aur folder hai to uske andar jao
-          if [ -d "Gaming-Buz" ] && [ ! -f "./settings.gradle" ] && [ ! -f "./settings.gradle.kts" ]; then
-            echo "Moving files from subfolder..."
-            mv Gaming-Buz/* . || true
-            mv Gaming-Buz/.* . 2>/dev/null || true
+          if [ -f "Gaming-Buz.zip" ]; then
+            unzip -o Gaming-Buz.zip
+            rm Gaming-Buz.zip
           fi
-          
+          # agar andar folder hai to bahar lao
+          if [ -d "Gaming-Buz" ] && [ ! -f "settings.gradle" ]; then
+            cp -r Gaming-Buz/* . 2>/dev/null || true
+            cp -r Gaming-Buz/.* . 2>/dev/null || true
+          fi
           ls -la
-          find . -name "settings.gradle*" -o -name "gradlew" | head -20
 
-      - name: Build APK
+      - name: Accept Android Licenses (FIX for 7 licenses error)
         run: |
-          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          chmod +x ./gradlew || chmod +x ./gradlew.bat || true
-          ./gradlew assembleDebug --stacktrace
+          mkdir -p $HOME/.android
+          touch $HOME/.android/repositories.cfg
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list || true
 
-      - name: Upload Gaming-Buz APK
+      - name: Build Gaming-Buz APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --stacktrace --no-daemon
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Gaming-Buz-APK
-          path: "**/app/build/outputs/apk/debug/*.apk"
-          if-no-files-found: error
+          path: "**/build/outputs/apk/debug/*.apk"
