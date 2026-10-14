@@ -17,42 +17,17 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Show Real Files in Repo
-        run: |
-          echo "=== Files in Repo ==="
-          ls -la
-          echo "=== Searching gradlew ==="
-          find . -name "gradlew" -type f 2>/dev/null || echo "gradlew NOT FOUND - Repo is empty!"
-          echo "=== Searching build.gradle ==="
-          find . -name "settings.gradle*" -type f 2>/dev/null || echo "settings.gradle NOT FOUND!"
-
       - name: Accept Android Licenses
         run: |
-          mkdir -p $HOME/.android
-          touch $HOME/.android/repositories.cfg
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
 
-      - name: Build APK - Auto Find Location
+      - name: Build Gaming-Buz APK
         run: |
-          # gradlew kahi bhi ho dhoondo
-          GRADLEW_PATH=$(find . -name "gradlew" -type f | head -n 1)
-          
-          if [ -z "$GRADLEW_PATH" ]; then
-            echo "ERROR: gradlew file repo me hai hi nahi!"
-            echo "Tumne sahi se files upload nahi ki hai. Code tab me gradlew dikhna chahiye."
-            exit 1
-          fi
-          
-          DIR=$(dirname "$GRADLEW_PATH")
-          echo "Found gradlew at: $GRADLEW_PATH"
-          echo "Building in: $DIR"
-          cd "$DIR"
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug
 
-      - name: Upload Gaming-Buz APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Gaming-Buz-APK
-          path: "**/app/build/outputs/apk/debug/*.apk"
-          if-no-files-found: error
+          path: app/build/outputs/apk/debug/app-debug.apk
