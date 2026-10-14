@@ -6,25 +6,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Unzip Fix
+      - name: Unzip
         run: |
-          sudo apt-get install -y unzip rsync
-          echo "Listing zips"
-          ls -la *.zip
-          for f in *.zip; do
-            unzip -o "$f"
-            rm -f "$f"
-          done
-          echo "Finding package.json"
-          find . -type f -name "package.json" | head -20
-          PKG=$(find . -type f -name "package.json" | head -n1)
-          if [ -n "$PKG" ]; then
-            DIR=$(dirname "$PKG")
-            echo "Found in $DIR, copying to root"
-            rsync -av "$DIR"/ ./
-          fi
+          sudo apt-get install -y unzip
+          for f in *.zip; do unzip -o "$f"; rm -f "$f"; done
           ls -la
-          rm -rf android dist
+          find . -name "package.json" | head -20
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -39,6 +26,11 @@ jobs:
 
       - name: Build APK One Shot
         run: |
+          PKG=$(find . -type f -name "package.json" -not -path "*/node_modules/*" -not -path "*/android/*" | head -n1)
+          echo "Found package.json at $PKG"
+          DIR=$(dirname "$PKG")
+          echo "Building in $DIR"
+          cd "$DIR"
           npm install --legacy-peer-deps
           npm run build
           printf '{"appId":"com.gamingbuz.app","appName":"Gaming Buz","webDir":"dist"}' > capacitor.config.json
@@ -53,4 +45,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Gaming-Buz-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: "**/app-debug.apk"
