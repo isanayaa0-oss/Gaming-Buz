@@ -1,0 +1,59 @@
+name: Make APK
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip with Python
+        run: |
+          python3 -c "
+          import zipfile, pathlib, os
+          zips = list(pathlib.Path('.').glob('*.zip'))
+          print('Zips found:', zips)
+          for z in zips:
+              print(f'Extracting {z}')
+              with zipfile.ZipFile(z, 'r') as zip_ref:
+                  zip_ref.extractall('.')
+              z.unlink()
+          print('Done unzip')
+          "
+          ls -la
+          find . -maxdepth 4 -name 'package.json' | head -20
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build APK One Shot
+        run: |
+          PKG=$(find . -type f -name 'package.json' -not -path '*/node_modules/*' -not -path '*/android/*' | head -n1)
+          echo "FINAL PKG PATH: $PKG"
+          DIR=$(dirname "$PKG")
+          echo "Building in DIR: $DIR"
+          cd "$DIR"
+          pwd
+          ls -la
+          npm install --legacy-peer-deps
+          npm run build
+          printf '{"appId":"com.gamingbuz.app","appName":"Gaming Buz","webDir":"dist"}' > capacitor.config.json
+          npm install --legacy-peer-deps @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npx cap add android
+          npx cap copy android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --parallel
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gaming-Buz-APK
+          path: "**/app-debug.apk"
