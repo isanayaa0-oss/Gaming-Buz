@@ -8,7 +8,7 @@ jobs:
       - name: Unzip
         run: |
           sudo apt-get install -y unzip
-          unzip -o *.zip
+          unzip -o "*.zip"
           rm -f *.zip
           ls -la
       - name: Setup Node
@@ -22,9 +22,9 @@ jobs:
           java-version: 17
       - name: Build APK
         run: |
-          npm install
+          npm install --legacy-peer-deps
           npm run build
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install --legacy-peer-deps @capacitor/core @capacitor/cli @capacitor/android
           npx cap init "Gaming Buz" com.gamingbuz.app --web-dir=dist
           npx cap add android
           cd android
