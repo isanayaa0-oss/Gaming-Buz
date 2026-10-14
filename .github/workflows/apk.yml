@@ -1,0 +1,36 @@
+name: Make APK
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip Project
+        run: |
+          sudo apt-get install -y unzip
+          for z in *.zip; do unzip -o "$z"; done
+          rm -f *.zip
+          for d in */; do if [ -f "$d/package.json" ]; then cp -r $d/*. 2>/dev/null; cp -r $d/.*. 2>/dev/null; rm -rf $d; break; fi; done
+          ls -la
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Build APK
+        run: |
+          npm install
+          npm run build
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init "Gaming Buz" com.gamingbuz.app --web-dir=dist
+          npx cap add android
+          cd android
+          chmod +x gradlew
+         ./gradlew assembleDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gaming-Buz-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
