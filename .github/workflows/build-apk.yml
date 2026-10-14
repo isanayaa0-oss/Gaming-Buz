@@ -17,38 +17,42 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Extract ZIP if exists
+      - name: Show Real Files in Repo
         run: |
+          echo "=== Files in Repo ==="
           ls -la
-          if [ -f "gaming-buz.zip" ]; then
-            unzip -o gaming-buz.zip
-            rm gaming-buz.zip
-          fi
-          if [ -f "Gaming-Buz.zip" ]; then
-            unzip -o Gaming-Buz.zip
-            rm Gaming-Buz.zip
-          fi
-          # agar andar folder hai to bahar lao
-          if [ -d "Gaming-Buz" ] && [ ! -f "settings.gradle" ]; then
-            cp -r Gaming-Buz/* . 2>/dev/null || true
-            cp -r Gaming-Buz/.* . 2>/dev/null || true
-          fi
-          ls -la
+          echo "=== Searching gradlew ==="
+          find . -name "gradlew" -type f 2>/dev/null || echo "gradlew NOT FOUND - Repo is empty!"
+          echo "=== Searching build.gradle ==="
+          find . -name "settings.gradle*" -type f 2>/dev/null || echo "settings.gradle NOT FOUND!"
 
-      - name: Accept Android Licenses (FIX for 7 licenses error)
+      - name: Accept Android Licenses
         run: |
           mkdir -p $HOME/.android
           touch $HOME/.android/repositories.cfg
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
 
-      - name: Build Gaming-Buz APK
+      - name: Build APK - Auto Find Location
         run: |
+          # gradlew kahi bhi ho dhoondo
+          GRADLEW_PATH=$(find . -name "gradlew" -type f | head -n 1)
+          
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "ERROR: gradlew file repo me hai hi nahi!"
+            echo "Tumne sahi se files upload nahi ki hai. Code tab me gradlew dikhna chahiye."
+            exit 1
+          fi
+          
+          DIR=$(dirname "$GRADLEW_PATH")
+          echo "Found gradlew at: $GRADLEW_PATH"
+          echo "Building in: $DIR"
+          cd "$DIR"
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace --no-daemon
+          ./gradlew assembleDebug --stacktrace
 
-      - name: Upload APK
+      - name: Upload Gaming-Buz APK
         uses: actions/upload-artifact@v4
         with:
           name: Gaming-Buz-APK
-          path: "**/build/outputs/apk/debug/*.apk"
+          path: "**/app/build/outputs/apk/debug/*.apk"
+          if-no-files-found: error
