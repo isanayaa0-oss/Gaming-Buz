@@ -1,0 +1,62 @@
+name: Make APK
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip and Clean
+        run: |
+          sudo apt-get install -y unzip
+          for f in *.zip; do [ -e "$f" ] && unzip -o "$f" && rm -f "$f"; done
+          rm -rf android dist
+          rm -f capacitor.config.ts capacitor.config.json
+      - name: Fix Top + Footer + Speed
+        run: |
+          find src -type f | xargs sed -i '/OnePlus 7/d; /OxygenOS/d; /Responsive Web/d; /APK \/ Project/d' || true
+          mkdir -p src/components
+          cat > src/components/Footer.tsx << 'EOF'
+          export default function Footer() {
+            return (
+              <footer className="bg-white border-t">
+                <div className="px-5 py-6">
+                  <div className="flex items-center gap-3"><div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white">🏏</div><h2 className="text-[22px] font-black">GAMING BUZ</h2></div>
+                  <p className="text-[13px] text-gray-500 mt-3 leading-5">GAMING BUZ is a leading cricket digital destination featuring Live match scores, Domestic tournaments, Team India and IPL coverage.</p>
+                  <div className="grid grid-cols-2 gap-6 mt-6">
+                    <div><h3 className="font-bold text-[13px] mb-3">SECTIONS</h3><div className="flex flex-col gap-2 text-[13px] text-gray-600"><span>Home</span><span>Team India</span><span>Domestic</span><span>IPL 2026</span><span className="text-amber-600 font-bold">Admin Dashboard</span></div></div>
+                    <div><h3 className="font-bold text-[13px] mb-3">POLICIES & LEGAL</h3><div className="flex flex-col gap-2 text-[13px] text-gray-600"><span>About Us</span><span>Privacy</span><span>Terms</span><span>Contact</span></div></div>
+                  </div>
+                  <div className="border-t mt-6 pt-4"><p className="text-[12px] text-gray-500">© 2026 GAMING BUZ. All Rights Reserved.</p></div>
+                </div>
+              </footer>
+            );
+          }
+          EOF
+          cp src/components/Footer.tsx src/components/layout/Footer.tsx 2>/dev/null || true
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Build FAST APK
+        run: |
+          export NODE_ENV=production
+          npm install --legacy-peer-deps
+          npm run build
+          echo '{"appId":"com.gamingbuz.app","appName":"Gaming Buz","webDir":"dist"}' > capacitor.config.json
+          npm install --legacy-peer-deps @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npx cap add android
+          npx cap copy android
+          sed -i 's/<application/<application android:hardwareAccelerated="true" /g' android/app/src/main/AndroidManifest.xml || true
+          cd android
+          chmod +x gradlew
+         ./gradlew assembleDebug --parallel
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gaming-Buz-FAST-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
