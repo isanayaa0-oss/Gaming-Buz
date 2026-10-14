@@ -5,11 +5,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unzip
+      - name: Unzip and Clean
         run: |
           sudo apt-get install -y unzip
-          unzip -o "*.zip"
+          unzip -o "*.zip" || true
           rm -f *.zip
+          rm -rf android capacitor.config.ts
           ls -la
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -24,9 +25,10 @@ jobs:
         run: |
           npm install --legacy-peer-deps
           npm run build
+          echo '{"appId":"com.gamingbuz.app","appName":"Gaming Buz","webDir":"dist"}' > capacitor.config.json
           npm install --legacy-peer-deps @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init "Gaming Buz" com.gamingbuz.app --web-dir=dist
           npx cap add android
+          npx cap copy
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
