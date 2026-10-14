@@ -9,32 +9,90 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - uses: gradle/actions/setup-gradle@v3
 
-      - name: Create Project
+      - name: Create Project with Python
         run: |
-          rm -rf app build.gradle settings.gradle gradle gradlew* *.zip
-          mkdir -p app/src/main/java/com/gamingbuz
-          mkdir -p gradle/wrapper
-          echo "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
-          rootProject.name = \"Gaming-Buz\"; include ':app'" > settings.gradle
-          echo "plugins { id 'com.android.application' version '8.2.2' apply false }" > build.gradle
-          echo "plugins { id 'com.android.application' }
-          android { namespace 'com.gamingbuz'; compileSdk 34; defaultConfig { applicationId \"com.gamingbuz\"; minSdk 21; targetSdk 34; versionCode 18; versionName \"18.0\" } }
-          dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }" > app/build.gradle
-          echo '<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android"><application android:label="Gaming-Buz"><activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity></application></manifest>' > app/src/main/AndroidManifest.xml
-          echo 'package com.gamingbuz; import android.app.Activity; import android.os.Bundle; import android.widget.TextView; public class MainActivity extends Activity { protected void onCreate(Bundle b){ super.onCreate(b); TextView tv=new TextView(this); tv.setText("Gaming-Buz v18 - Fixed!"); tv.setTextSize(24); setContentView(tv); } }' > app/src/main/java/com/gamingbuz/MainActivity.java
-          echo -e "distributionBase=GRADLE_USER_HOME\ndistributionPath=wrapper/dists\ndistributionUrl=https\\://services.gradle.org/distributions/gradle-8.4-bin.zip\nzipStoreBase=GRADLE_USER_HOME\nzipStorePath=wrapper/dists" > gradle/wrapper/gradle-wrapper.properties
+          rm -rf app build.gradle settings.gradle gradle gradlew*
+          python3 << 'PY'
+          import os
+          os.makedirs("app/src/main/java/com/gamingbuz", exist_ok=True)
+          os.makedirs("gradle/wrapper", exist_ok=True)
 
-      - name: Install SDK and Build APK
+          open("settings.gradle","w").write("""
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+          rootProject.name = "Gaming-Buz"
+          include ':app'
+          """)
+
+          open("build.gradle","w").write("""
+          plugins { id 'com.android.application' version '8.2.2' apply false }
+          """)
+
+          open("app/build.gradle","w").write("""
+          plugins { id 'com.android.application' }
+          android {
+            namespace 'com.gamingbuz'
+            compileSdk 34
+            defaultConfig {
+              applicationId "com.gamingbuz"
+              minSdk 21
+              targetSdk 34
+              versionCode 19
+              versionName "19.0"
+            }
+          }
+          dependencies {
+            implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
+          """)
+
+          open("app/src/main/AndroidManifest.xml","w").write("""<?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <application android:label="Gaming-Buz">
+              <activity android:name=".MainActivity" android:exported="true">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN"/>
+                  <category android:name="android.intent.category.LAUNCHER"/>
+                </intent-filter>
+              </activity>
+            </application>
+          </manifest>
+          """)
+
+          open("app/src/main/java/com/gamingbuz/MainActivity.java","w").write("""
+          package com.gamingbuz;
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.widget.TextView;
+          public class MainActivity extends Activity {
+            protected void onCreate(Bundle b){
+              super.onCreate(b);
+              TextView tv=new TextView(this);
+              tv.setText("Gaming-Buz v19 - Finally Fixed!");
+              tv.setTextSize(24);
+              tv.setPadding(50,300,50,50);
+              setContentView(tv);
+            }
+          }
+          """)
+
+          open("gradle/wrapper/gradle-wrapper.properties","w").write("""distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\\://services.gradle.org/distributions/gradle-8.4-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          """)
+          PY
+
+      - name: Build APK
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" > /dev/null
           gradle wrapper --gradle-version 8.4
           chmod +x ./gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
