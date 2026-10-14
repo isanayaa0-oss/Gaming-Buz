@@ -9,98 +9,72 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-
-      - name: Extract and Check Project Type
+          
+      - name: Create Gaming-Buz Android Project
         run: |
-          sudo apt-get install -y unzip > /dev/null
-          unzip -o gaming-buz.zip || unzip -o *.zip || true
-          echo "===== ANDAR KYA HAI ====="
-          ls -la
-          ls -R | head -n 100
-          echo "========================"
+          rm -rf app src build.gradle settings.gradle
+          mkdir -p app/src/main/java/com/gamingbuz
+          echo "include ':app'" > settings.gradle
+          
+          cat > app/build.gradle <<'GRADLE'
+          plugins { id 'com.android.application' }
+          android {
+            namespace 'com.gamingbuz'
+            compileSdk 34
+            defaultConfig {
+              applicationId "com.gamingbuz"
+              minSdk 21
+              targetSdk 34
+              versionCode 15
+              versionName "15.0"
+            }
+            buildTypes { release { minifyEnabled false } }
+          }
+          dependencies {
+            implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
+          GRADLE
+          
+          cat > app/src/main/AndroidManifest.xml <<'MANIFEST'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <application android:label="Gaming-Buz" android:theme="@android:style/Theme.NoTitleBar">
+              <activity android:name=".MainActivity" android:exported="true">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN" />
+                  <category android:name="android.intent.category.LAUNCHER" />
+                </intent-filter>
+              </activity>
+            </application>
+          </manifest>
+          MANIFEST
+          
+          cat > app/src/main/java/com/gamingbuz/MainActivity.java <<'JAVA'
+          package com.gamingbuz;
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.widget.TextView;
+          public class MainActivity extends Activity {
+            protected void onCreate(Bundle b) {
+              super.onCreate(b);
+              TextView tv = new TextView(this);
+              tv.setText("Gaming-Buz v15 Ready! IPL Lifetime Active");
+              tv.setTextSize(24);
+              setContentView(tv);
+            }
+          }
+          JAVA
 
-      - name: Build APK - Auto Wrapper
+      - name: Build APK
         run: |
-          # Agar gradlew mil gaya to normal build
-          if find . -name "gradlew" -type f | grep -q gradlew; then
-            echo "Android project found"
-            GRADLEW=$(find . -name "gradlew" -type f | head -n 1)
-            DIR=$(dirname "$GRADLEW")
-            cd "$DIR"
-            chmod +x ./gradlew
-            yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
-            ./gradlew assembleDebug
-          else
-            echo "No gradlew - Creating Android Wrapper for your Web App..."
-            # Yaha WebView wrapper banega
-            mkdir -p GamingBuzWrapper
-            cd GamingBuzWrapper
-            # Yaha se naya Android project banega jo tumhari files ko load karega
-            $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" > /dev/null || true
-            
-            # Simple wrapper project generate karo
-            cat > settings.gradle << 'EOF'
-            include ':app'
-            EOF
-            
-            mkdir -p app/src/main/java/com/gamingbuz
-            mkdir -p app/src/main/assets
-            
-            # Tumhari website files ko assets me copy karo
-            cp -r ../*.html ../*.js ../*.css ../src ../public ../dist . 2>/dev/null || true
-            cp -r ../* app/src/main/assets/ 2>/dev/null || true
-            
-            cat > app/build.gradle << 'EOF'
-            plugins { id 'com.android.application' }
-            android {
-              namespace 'com.gamingbuz'
-              compileSdk 34
-              defaultConfig {
-                applicationId "com.gamingbuz"
-                minSdk 21
-                targetSdk 34
-                versionCode 1
-                versionName "1.0"
-              }
-              buildTypes { release { minifyEnabled false } }
-            }
-            dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }
-            EOF
-            
-            cat > app/src/main/AndroidManifest.xml << 'EOF'
-            <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <application android:allowBackup="true" android:label="Gaming-Buz">
-                <activity android:name=".MainActivity" android:exported="true">
-                  <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
-                </activity>
-              </application>
-            </manifest>
-            EOF
-            
-            cat > app/src/main/java/com/gamingbuz/MainActivity.java << 'EOF'
-            package com.gamingbuz;
-            import android.app.Activity;
-            import android.os.Bundle;
-            import android.webkit.WebView;
-            import android.webkit.WebViewClient;
-            public class MainActivity extends Activity {
-              protected void onCreate(Bundle b) {
-                super.onCreate(b);
-                WebView w = new WebView(this);
-                w.getSettings().setJavaScriptEnabled(true);
-                w.setWebViewClient(new WebViewClient());
-                w.loadUrl("file:///android_asset/index.html");
-                setContentView(w);
-              }
-            }
-            EOF
-            
-            gradle wrapper
-            gradle assembleDebug
-          fi
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" > /dev/null
+          gradle wrapper
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Gaming-Buz-APK-Final
-          path: "**/app/build/outputs/apk/debug/*.apk"
+          name: Gaming-Buz-APK-v15
+          path: app/build/outputs/apk/debug/*.apk
