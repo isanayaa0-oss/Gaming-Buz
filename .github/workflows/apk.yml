@@ -31,11 +31,12 @@ jobs:
           ROOT=$(find . -name "settings.gradle.kts" | head -n1 | xargs dirname)
           echo "Project root: $ROOT"
           cd "$ROOT"
-          pwd
-          ls -la
           if [ ! -f "./gradlew" ]; then
-            echo "gradlew missing, generating..."
-            gradle wrapper --gradle-version 8.7
+            echo "Generating gradle wrapper 9.3.1..."
+            gradle wrapper --gradle-version 9.3.1
+          else
+            echo "Updating wrapper to 9.3.1..."
+            ./gradlew wrapper --gradle-version 9.3.1 || gradle wrapper --gradle-version 9.3.1
           fi
           chmod +x gradlew
           ./gradlew assembleDebug --parallel
