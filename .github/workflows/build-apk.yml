@@ -9,15 +9,43 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          
-      - name: Create Gaming-Buz Android Project
+      - uses: gradle/actions/setup-gradle@v3
+
+      - name: Create Full Android Project
         run: |
-          rm -rf app src build.gradle settings.gradle
+          rm -rf app build.gradle settings.gradle gradle gradlew*
           mkdir -p app/src/main/java/com/gamingbuz
-          echo "include ':app'" > settings.gradle
+          mkdir -p gradle/wrapper
           
-          cat > app/build.gradle <<'GRADLE'
-          plugins { id 'com.android.application' }
+          cat > settings.gradle <<'ENDOFFILE'
+          pluginManagement {
+            repositories {
+              google()
+              mavenCentral()
+              gradlePluginPortal()
+            }
+          }
+          dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories {
+              google()
+              mavenCentral()
+            }
+          }
+          rootProject.name = "Gaming-Buz"
+          include ':app'
+          ENDOFFILE
+          
+          cat > build.gradle <<'ENDOFFILE'
+          plugins {
+            id 'com.android.application' version '8.2.2' apply false
+          }
+          ENDOFFILE
+          
+          cat > app/build.gradle <<'ENDOFFILE'
+          plugins {
+            id 'com.android.application'
+          }
           android {
             namespace 'com.gamingbuz'
             compileSdk 34
@@ -25,20 +53,23 @@ jobs:
               applicationId "com.gamingbuz"
               minSdk 21
               targetSdk 34
-              versionCode 15
-              versionName "15.0"
+              versionCode 16
+              versionName "16.0"
             }
-            buildTypes { release { minifyEnabled false } }
+            buildTypes {
+              release { minifyEnabled false }
+              debug { minifyEnabled false }
+            }
           }
           dependencies {
             implementation 'androidx.appcompat:appcompat:1.6.1'
           }
-          GRADLE
+          ENDOFFILE
           
-          cat > app/src/main/AndroidManifest.xml <<'MANIFEST'
+          cat > app/src/main/AndroidManifest.xml <<'ENDOFFILE'
+          <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            <uses-permission android:name="android.permission.INTERNET" />
-            <application android:label="Gaming-Buz" android:theme="@android:style/Theme.NoTitleBar">
+            <application android:label="Gaming-Buz" android:theme="@android:style/Theme.Light.NoTitleBar">
               <activity android:name=".MainActivity" android:exported="true">
                 <intent-filter>
                   <action android:name="android.intent.action.MAIN" />
@@ -47,9 +78,9 @@ jobs:
               </activity>
             </application>
           </manifest>
-          MANIFEST
+          ENDOFFILE
           
-          cat > app/src/main/java/com/gamingbuz/MainActivity.java <<'JAVA'
+          cat > app/src/main/java/com/gamingbuz/MainActivity.java <<'ENDOFFILE'
           package com.gamingbuz;
           import android.app.Activity;
           import android.os.Bundle;
@@ -58,23 +89,32 @@ jobs:
             protected void onCreate(Bundle b) {
               super.onCreate(b);
               TextView tv = new TextView(this);
-              tv.setText("Gaming-Buz v15 Ready! IPL Lifetime Active");
-              tv.setTextSize(24);
+              tv.setText("Gaming-Buz v16 Ready - All Errors Fixed!");
+              tv.setTextSize(22);
+              tv.setPadding(50,200,50,50);
               setContentView(tv);
             }
           }
-          JAVA
+          ENDOFFILE
+          
+          cat > gradle/wrapper/gradle-wrapper.properties <<'ENDOFFILE'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
+          networkTimeout=10000
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          ENDOFFILE
 
       - name: Build APK
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" > /dev/null
-          gradle wrapper
+          gradle wrapper --gradle-version 8.4
           chmod +x ./gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Gaming-Buz-APK-v15
+          name: Gaming-Buz-APK-Final-Fixed
           path: app/build/outputs/apk/debug/*.apk
