@@ -23,22 +23,20 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Accept Android Licenses
-        run: |
-          yes | sdkmanager --licenses || true
+      - name: Accept Licenses
+        run: yes | sdkmanager --licenses || true
 
       - name: Build APK
         run: |
-          GRADLEW=$(find . -type f -name "gradlew" | head -n1)
-          echo "Found gradlew at: $GRADLEW"
-          if [ -z "$GRADLEW" ]; then
-            echo "gradlew nahi mila, files ye hai:"
-            find . -maxdepth 4 -type f | head -n 100
-            exit 1
+          ROOT=$(find . -name "settings.gradle.kts" | head -n1 | xargs dirname)
+          echo "Project root: $ROOT"
+          cd "$ROOT"
+          pwd
+          ls -la
+          if [ ! -f "./gradlew" ]; then
+            echo "gradlew missing, generating..."
+            gradle wrapper --gradle-version 8.7
           fi
-          DIR=$(dirname "$GRADLEW")
-          echo "Building in $DIR"
-          cd "$DIR"
           chmod +x gradlew
           ./gradlew assembleDebug --parallel
 
