@@ -6,19 +6,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Unzip
+      - name: Unzip Fix
         run: |
-          sudo apt-get install -y unzip
-          for f in *.zip; do [ -e "$f" ] && unzip -o "$f" && rm -f "$f"; done
-          if [ ! -f package.json ]; then
-            for d in */; do
-              if [ -f "$d/package.json" ]; then
-                mv "$d"/* . || true
-                mv "$d"/.* . 2>/dev/null || true
-                rm -rf "$d"
-                break
-              fi
-            done
+          sudo apt-get install -y unzip rsync
+          ZIP=$(ls *.zip | head -n1)
+          echo "Unzipping $ZIP"
+          unzip -o "$ZIP"
+          rm -f "$ZIP"
+          FOUND=$(find . -maxdepth 4 -name "package.json" | head -n1)
+          echo "Found package.json at: $FOUND"
+          if [ -n "$FOUND" ]; then
+            FDIR=$(dirname "$FOUND")
+            if [ "$FDIR" != "." ]; then
+              echo "Moving files from $FDIR to root"
+              rsync -a "$FDIR"/ ./
+              rm -rf "$FDIR"
+            fi
           fi
           rm -rf android dist
           ls -la
