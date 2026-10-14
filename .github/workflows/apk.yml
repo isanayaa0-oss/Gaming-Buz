@@ -1,0 +1,42 @@
+name: Make APK
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip
+        run: |
+          sudo apt-get install -y unzip
+          for f in *.zip; do [ -e "$f" ] && unzip -o "$f" && rm -f "$f"; done
+          rm -rf android dist
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build APK
+        run: |
+          npm install --legacy-peer-deps
+          npm run build
+          echo {"appId":"com.gamingbuz.app","appName":"Gaming Buz","webDir":"dist"} > capacitor.config.json
+          npm install --legacy-peer-deps @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npx cap add android
+          npx cap copy android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --parallel
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gaming-Buz-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
