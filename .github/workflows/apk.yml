@@ -9,22 +9,24 @@ jobs:
       - name: Unzip Fix
         run: |
           sudo apt-get install -y unzip rsync
-          ZIP=$(ls *.zip | head -n1)
-          echo "Unzipping $ZIP"
-          unzip -o "$ZIP"
-          rm -f "$ZIP"
-          FOUND=$(find . -maxdepth 4 -name "package.json" | head -n1)
-          echo "Found package.json at: $FOUND"
-          if [ -n "$FOUND" ]; then
+          for f in *.zip; do
+            echo "Unzipping $f"
+            unzip -o "$f"
+            rm -f "$f"
+          done
+          echo "Before move:"
+          find . -maxdepth 3 -name "package.json" | head -20
+          while [ ! -f package.json ]; do
+            FOUND=$(find . -maxdepth 6 -name "package.json" | head -n1)
+            if [ -z "$FOUND" ]; then break; fi
             FDIR=$(dirname "$FOUND")
-            if [ "$FDIR" != "." ]; then
-              echo "Moving files from $FDIR to root"
-              rsync -a "$FDIR"/ ./
-              rm -rf "$FDIR"
-            fi
-          fi
-          rm -rf android dist
+            echo "Found package.json in $FDIR, moving to root"
+            rsync -a "$FDIR"/ ./
+            if [ "$FDIR" != "." ]; then rm -rf "$FDIR"; fi
+          done
+          echo "After move:"
           ls -la
+          rm -rf android dist
 
       - name: Setup Node
         uses: actions/setup-node@v4
