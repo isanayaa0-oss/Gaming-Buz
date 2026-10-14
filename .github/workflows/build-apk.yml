@@ -18,30 +18,50 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK Manually
-        run: |
-          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          echo "Android SDK setup done"
+      - name: Setup Android SDK
+        run: echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: Find and Grant Permission to gradlew
+      - name: Check Project Structure
         run: |
-          FOUND=$(find . -name "gradlew" -type f | head -n 1)
-          echo "Found gradlew at: $FOUND"
-          chmod +x "$FOUND"
-          DIR=$(dirname "$FOUND")
-          echo "GRADLEW_PATH=$DIR" >> $GITHUB_ENV
-          echo "Gradlew dir: $DIR"
-          ls -la "$DIR"
+          echo "--- ROOT FILES ---"
+          ls -la
+          echo "--- FIND GRADLEW ---"
+          find . -name "gradlew" -o -name "build.gradle*" | head -20
+          echo "--- CHECK Gaming-Buz FOLDER ---"
+          ls -la Gaming-Buz/ 2>/dev/null || echo "No Gaming-Buz subfolder"
 
-      - name: Build Gaming-Buz Debug APK
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.5
+
+      - name: Build APK - Auto Find Project
         run: |
-          cd ${{ env.GRADLEW_PATH }}
-          ./gradlew assembleDebug --stacktrace
+          # Find where build.gradle is
+          PROJECT_DIR=$(find . -name "build.gradle*" -type f | grep -E "app/build.gradle" | head -n 1 | xargs dirname | xargs dirname)
+          if [ -z "$PROJECT_DIR" ]; then
+            PROJECT_DIR=$(find . -name "settings.gradle*" -type f | head -n 1 | xargs dirname)
+          fi
+          if [ -z "$PROJECT_DIR" ]; then
+            PROJECT_DIR="."
+          fi
+          
+          echo "Building in: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
+          
+          # If gradlew exists use it, else use gradle command directly
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew assembleDebug --stacktrace
+          else
+            echo "gradlew not found, using gradle directly"
+            gradle assembleDebug --stacktrace
+          fi
 
       - name: Upload Gaming-Buz APK
         uses: actions/upload-artifact@v4
         with:
           name: Gaming-Buz-APK
           path: |
-            **/app/build/outputs/apk/debug/app-debug.apk
+            **/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
