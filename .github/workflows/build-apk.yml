@@ -12,39 +12,26 @@ jobs:
       - name: Checkout Gaming-Buz Code
         uses: actions/checkout@v4
 
-      - name: Find gradlew location
-        run: |
-          echo "Listing files:"
-          ls -la
-          echo "Finding gradlew:"
-          find . -name "gradlew" -type f
-          echo "PWD:"
-          pwd
-
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Grant Permission to gradlew (root or subfolder)
+      - name: Setup Android SDK Manually
         run: |
-          if [ -f "./gradlew" ]; then
-            chmod +x ./gradlew
-            echo "GRADLEW_PATH=./" >> $GITHUB_ENV
-          elif [ -f "./Gaming-Buz/gradlew" ]; then
-            chmod +x ./Gaming-Buz/gradlew
-            echo "GRADLEW_PATH=./Gaming-Buz/" >> $GITHUB_ENV
-          else
-            FOUND=$(find . -name "gradlew" | head -n 1)
-            DIR=$(dirname "$FOUND")
-            chmod +x "$FOUND"
-            echo "GRADLEW_PATH=$DIR/" >> $GITHUB_ENV
-          fi
-          echo "Gradlew path is ${{ env.GRADLEW_PATH }}"
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          echo "Android SDK setup done"
+
+      - name: Find and Grant Permission to gradlew
+        run: |
+          FOUND=$(find . -name "gradlew" -type f | head -n 1)
+          echo "Found gradlew at: $FOUND"
+          chmod +x "$FOUND"
+          DIR=$(dirname "$FOUND")
+          echo "GRADLEW_PATH=$DIR" >> $GITHUB_ENV
+          echo "Gradlew dir: $DIR"
+          ls -la "$DIR"
 
       - name: Build Gaming-Buz Debug APK
         run: |
@@ -56,7 +43,5 @@ jobs:
         with:
           name: Gaming-Buz-APK
           path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            Gaming-Buz/app/build/outputs/apk/debug/app-debug.apk
             **/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
