@@ -31,11 +31,19 @@ jobs:
           ROOT=$(find . -name "settings.gradle.kts" | head -n1 | xargs dirname)
           echo "Project root: $ROOT"
           cd "$ROOT"
+          echo "Creating missing debug keystore..."
+          mkdir -p Buz
+          mkdir -p app/Buz
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore Buz/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+          cp Buz/debug.keystore app/Buz/debug.keystore || true
+          cp Buz/debug.keystore ~/.android/debug.keystore || true
+          cp Buz/debug.keystore debug.keystore || true
+          ls -la Buz/
+          
           if [ ! -f "./gradlew" ]; then
-            echo "Generating gradle wrapper 9.3.1..."
             gradle wrapper --gradle-version 9.3.1
           else
-            echo "Updating wrapper to 9.3.1..."
             ./gradlew wrapper --gradle-version 9.3.1 || gradle wrapper --gradle-version 9.3.1
           fi
           chmod +x gradlew
