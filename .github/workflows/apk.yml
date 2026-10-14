@@ -9,22 +9,20 @@ jobs:
       - name: Unzip Fix
         run: |
           sudo apt-get install -y unzip rsync
+          echo "Listing zips"
+          ls -la *.zip
           for f in *.zip; do
-            echo "Unzipping $f"
             unzip -o "$f"
             rm -f "$f"
           done
-          echo "Before move:"
-          find . -maxdepth 3 -name "package.json" | head -20
-          while [ ! -f package.json ]; do
-            FOUND=$(find . -maxdepth 6 -name "package.json" | head -n1)
-            if [ -z "$FOUND" ]; then break; fi
-            FDIR=$(dirname "$FOUND")
-            echo "Found package.json in $FDIR, moving to root"
-            rsync -a "$FDIR"/ ./
-            if [ "$FDIR" != "." ]; then rm -rf "$FDIR"; fi
-          done
-          echo "After move:"
+          echo "Finding package.json"
+          find . -type f -name "package.json" | head -20
+          PKG=$(find . -type f -name "package.json" | head -n1)
+          if [ -n "$PKG" ]; then
+            DIR=$(dirname "$PKG")
+            echo "Found in $DIR, copying to root"
+            rsync -av "$DIR"/ ./
+          fi
           ls -la
           rm -rf android dist
 
@@ -39,7 +37,7 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Build Smooth APK
+      - name: Build APK One Shot
         run: |
           npm install --legacy-peer-deps
           npm run build
